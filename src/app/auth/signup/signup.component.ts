@@ -1,6 +1,16 @@
 import { Component, DestroyRef, inject, OnInit } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { debounce, debounceTime } from 'rxjs';
+import { AbstractControl, FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { debounceTime } from 'rxjs';
+
+function equalValues(controlName1: string, controlName2: string) {
+  return (control: AbstractControl) => {
+    const value1 = control.get(controlName1)?.value;
+    const value2 = control.get(controlName2)?.value;
+
+    if (value1 === value2) return null
+    return { notEqual: true }
+  }
+}
 
 @Component({
   selector: 'app-signup',
@@ -15,9 +25,35 @@ export class SignupComponent implements OnInit {
     email: new FormControl('', {
       validators: [Validators.required, Validators.email],
     }),
-    password: new FormControl('', {
-      validators: [Validators.required, Validators.minLength(8)],
+    passwords: new FormGroup({
+      password: new FormControl('', {
+        validators: [Validators.required, Validators.minLength(8)],
+      }),
+      confirmPassword: new FormControl('', {
+        validators: [Validators.required, Validators.minLength(8)],
+      }),
+    }, {
+      validators: [equalValues('password', 'confirmPassword')],
     }),
+    firstName: new FormControl('', { validators: [Validators.required] }),
+    lastName: new FormControl('', { validators: [Validators.required] }),
+    address: new FormGroup({
+      street: new FormControl('', { validators: [Validators.required] }),
+      number: new FormControl('', { validators: [Validators.required] }),
+      postalCode: new FormControl('', { validators: [Validators.required] }),
+      city: new FormControl('', { validators: [Validators.required] }),
+    }),
+    role: new FormControl<
+      'student' | 'teacher' | 'employee' | 'founder' | 'other'
+    >('student', {
+      validators: [Validators.required],
+    }),
+    source: new FormArray([
+      new FormControl(false),
+      new FormControl(false),
+      new FormControl(false)
+    ]),
+    agree: new FormControl(false, { validators: [Validators.required] })
   });
 
   get isValidEmail() {
@@ -30,9 +66,9 @@ export class SignupComponent implements OnInit {
 
   get isValidPassword() {
     return (
-      this.form.controls.password.touched &&
-      this.form.controls.password.dirty &&
-      this.form.controls.password.invalid
+      this.form.controls.passwords.controls.password.touched &&
+      this.form.controls.passwords.controls.password.dirty &&
+      this.form.controls.passwords.controls.password.invalid
     );
   };
 
@@ -59,12 +95,16 @@ export class SignupComponent implements OnInit {
   };
 
   onSubmit() {
-    if (this.form.invalid) {
+    if (this.form.invalid || !this.form.value.agree) {
+      console.log('Invalid Form')
       return
     }
-    const enteredEmail = this.form.value.email;
-    const enteredPassword = this.form.value.password;
-    console.log(enteredEmail, enteredPassword);
+    console.log(this.form.value);
+    this.form.reset();
+    this.form.controls.role.setValue('student')
+  }
+
+  onReset() {
     this.form.reset();
   }
 }
